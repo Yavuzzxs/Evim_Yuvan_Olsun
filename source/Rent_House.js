@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { View, StyleSheet, ImageBackground, Text, TextInput, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, ImageBackground, Text, TextInput, Image, TouchableOpacity } from 'react-native';
 import { useNavigation } from "@react-navigation/native"
 import { styles } from "../styles";
 import { Button, Menu, Provider, Modal, } from 'react-native-paper';
@@ -9,8 +9,40 @@ import cities from '../city';
 
 import { ScrollView } from 'react-native-gesture-handler';
 
+import { collection, query, where, onSnapshot, getDocs, setDoc, doc } from "firebase/firestore";
+import { db } from '../config';
+import { uuidv4 } from '@firebase/util';
 
 const Rent_House = () => {
+
+
+    const set = async () => {
+        alert("Başvurunuz Kaydedildi")
+        const uid = uuidv4()
+
+        await setDoc(doc(db, "Depremzedeler", uid), {
+
+            ad: firstname,
+            soyad: surname,
+            il: city,
+            ilce: county,
+            adres: address,
+            telefon: phone,
+            kimlikno: identity,
+            vatandaslik: uyruk,
+            cinsiyet: gender,
+            öncelikdurum: isselectedDisabled,
+            öncelikdurum2: isselectedOrphan,
+            öncelikdurum3: isselectedPregnant,
+            il2: city2,
+            ilce2: county2,
+            address2: address2,
+
+        });
+    }
+
+
+
     const navigation = useNavigation()
 
     const [gender, setGender] = useState("Cinsiyet...");
@@ -21,7 +53,7 @@ const Rent_House = () => {
 
     const handleSelect = (selectedGender) => {
         setGender(selectedGender); // Seçilen cinsiyeti state'e kaydet
-        closeGender_Menu(); // Menüyü kapat
+        closeGender_Menu();
     }
     const handlePhoneNumberChange = (txt) => {
         if (/^\d+$/.test(txt)) {
@@ -36,7 +68,6 @@ const Rent_House = () => {
 
     const [visibleUyruk, setVisibleUyruk] = useState(false);
     const [uyruk, setUyruk] = useState("Seçiniz...")
-
 
     const [identity, setIdentity] = useState('')
     const [firstname, setFirstname] = useState('')
@@ -75,37 +106,48 @@ const Rent_House = () => {
     const [isselectedDisabled, setSelectionDisabled] = useState(false);
 
 
-    const [inputs, setInputs] = useState([{ id: '', name: '', surname: '', relation: null }]);
+    const [inputs, setInputs] = useState([{ id: 0, name: '', surname: '', menuVisible: false, selectedItem: '' }]);
+    const [idCounter, setIdCounter] = useState(1);
 
-    const relations = ['Çocuk', 'Eş', 'Anne', 'Baba', 'Diğer', 'Aile Dışı'].map(String);
-
-    const addPerson = () => {
-        setInputs([...inputs, { id: '', name: '', surname: '', relation: null }]);
-    };
-
-    const handleSave = () => {
-        //bilgileri  kaydetmek için
-        console.log(inputs);
-        setInputs([{ id: '', name: '', surname: '', relation: null }]);
-    };
-
-    const handleInputChange = (index, name, value) => {
+    const handleAddInput = () => {
         const newInputs = [...inputs];
-        newInputs[index][name] = value;
+        newInputs.push({ id: idCounter, name: '', surname: '', menuVisible: false, selectedItem: '' });
+        setInputs(newInputs);
+        setIdCounter(idCounter + 1);
+    };
+
+    const handleInputChange = (index, field, value) => {
+        const newInputs = [...inputs];
+        newInputs[index][field] = value.toString();
         setInputs(newInputs);
     };
 
-    const handleRelationSelect = (index, relationIndex) => {
+    const handleMenuOpen = (index) => {
         const newInputs = [...inputs];
-        newInputs[index] = { relation: relationIndex };
+        newInputs[index].menuVisible = true;
+        setInputs(newInputs);
+    };
+
+    const handleMenuClose = (index) => {
+        const newInputs = [...inputs];
+        newInputs[index].menuVisible = false;
+        setInputs(newInputs);
+    };
+
+    const handleMenuItemSelect = (item, index) => {
+        const newInputs = [...inputs];
+        newInputs[index].selectedItem = item;
+        newInputs[index].menuVisible = false;
         setInputs(newInputs);
     };
     return (
         <Provider>
             <ScrollView>
-
                 <View style={styles.Rent_House_View}>
-                    <Text style={{ fontWeight: 'bold', fontSize: 40, textAlign: 'center', marginTop: '10%', marginBottom: '5%' }}>Evim Yuvan Olsun kampanyası ile siz de destek olun</Text>
+                    <Image style={[styles.image_afad, { backgroundColor: '#F4F4F4' }]}
+                        source={{ uri: 'https://depremzede.icisleri.gov.tr/css/AFAD-_-Icisleri-Bkn.png' }}
+                    />
+                    <Text style={{ fontWeight: 'bold', fontSize: 40, textAlign: 'center', marginBottom: '5%' }}>Evim Yuvan Olsun kampanyası ile siz de destek olun</Text>
                     <Text style={{ fontWeight: 'bold', fontSize: 20, textAlign: 'left', }}>Genel Bilgiler</Text>
                     <Menu
                         visible={visibleUyruk}
@@ -147,7 +189,7 @@ const Rent_House = () => {
                         style={styles.Rent_House_Checkbox}
                         checked={isselectedPregnant}
                         checkedColor='red'
-                        containerStyle={{backgroundColor:'white',width:'80%'}}
+                        containerStyle={{ backgroundColor: 'white', width: '80%' }}
                         onPress={() => setSelectionPregnant(!isselectedPregnant)}
                     />
                     <CheckBox
@@ -155,7 +197,7 @@ const Rent_House = () => {
                         style={styles.Rent_House_Checkbox}
                         checked={isselectedOrphan}
                         checkedColor='red'
-                        containerStyle={{backgroundColor:'white',width:'80%'}}
+                        containerStyle={{ backgroundColor: 'white', width: '80%' }}
                         onPress={() => setSelectionOrphan(!isselectedOrphan)}
                     />
 
@@ -164,7 +206,7 @@ const Rent_House = () => {
                         style={styles.Rent_House_Checkbox}
                         checked={isselectedDisabled}
                         checkedColor='red'
-                        containerStyle={{backgroundColor:'white',width:'80%'}}
+                        containerStyle={{ backgroundColor: 'white', width: '80%' }}
                         onPress={() => setSelectionDisabled(!isselectedDisabled)}
                     />
 
@@ -229,46 +271,47 @@ const Rent_House = () => {
                         onChangeText={txt => setAddress2(txt)}
                     />
                     <Text style={{ fontWeight: 'bold', fontSize: 20, textAlign: 'left', marginTop: '5%' }}>Beraber Konaklayacak Kişi Bilgileri</Text>
-                    {inputs.map((input, index) => (
-                        <View style={styles.Rent_House_View} key={index}>
-                            <TextInput style={styles.Rent_House_Input}
-                                placeholder="T.C. Kimlik No/Passport No"
-                                value={input.id}
-                                keyboardType='phone-pad'
-                                onChangeText={(value) => handleInputChange(index, 'id', value)}
-                            />
+                    <View>
+                        {inputs.map((input, index) => (
+                            <View key={input.id}>
+                                
+                                <TextInput
+                                    style={styles.Rent_House_Input2}
+                                    placeholder="T.C. Kimlik No/Passport No"
+                                    value={input.identity}
+                                    onChangeText={(value) => handleInputChange(index, 'identity', value)}
+                                />
 
-                            <TextInput style={styles.Rent_House_Input}
-                                placeholder="Ad"
-                                value={input.name}
-                                onChangeText={(value) => handleInputChange(index, 'name', value)}
-                            />
-                            <TextInput style={styles.Rent_House_Input}
-                                placeholder="Soyad"
-                                value={input.surname}
-                                onChangeText={(value) => handleInputChange(index, 'surname', value)}
-                            />
-                            <Menu
-                                visible={inputs[index].relation !== null}
-                                onDismiss={() => handleRelationSelect(index, null)}
-                                anchor={<Button style={styles.Rent_House_Menu} onPress={() => handleRelationSelect(index, 0)}>Çocuk/Eş/Anne/Baba/Aileden Değil</Button>}
+                                <TextInput
+                                    style={styles.Rent_House_Input2}
+                                    placeholder="Ad"
+                                    value={input.name}
+                                    onChangeText={(value) => handleInputChange(index, 'name', value)}
+                                />
+                                <TextInput
+                                    style={styles.Rent_House_Input2}
+                                    placeholder="Soyad"
+                                    value={input.surname}
+                                    onChangeText={(value) => handleInputChange(index, 'surname', value)}
+                                />
+                                <Menu
+                                    visible={input.menuVisible}
+                                    anchor={<Button style={styles.Rent_House_Button} onPress={() => handleMenuOpen(index)}>{input.selectedItem || 'Seçiniz...'}{ }</Button>}
+                                    onDismiss={() => handleMenuClose(index)}
+                                >
+                                    <Menu.Item onPress={() => handleMenuItemSelect('Çocuk', index)} title="Çocuk" />
+                                    <Menu.Item onPress={() => handleMenuItemSelect('Eş', index)} title="Eş" />
+                                    <Menu.Item onPress={() => handleMenuItemSelect('Anne', index)} title="Anne" />
+                                    <Menu.Item onPress={() => handleMenuItemSelect('Baba', index)} title="Baba" />
+                                    <Menu.Item onPress={() => handleMenuItemSelect('Diğer Akraba', index)} title="Diğer Akraba" />
+                                    <Menu.Item onPress={() => handleMenuItemSelect('Aileden Değil', index)} title="Aileden Değil" />
+                                </Menu>
+                            </View>
+                        ))}
 
-                            >
-                                {relations.map((relation, relationIndex) => (
-                                    <Menu.Item
-                                        key={relationIndex}
-                                        onPress={() => {
-                                            handleRelationSelect(index, relationIndex);
-                                        }}
-                                        title={relation}
-                                    />
-                                ))}
-                            </Menu>
-
-                        </View>
-                    ))}
-                    <Button style={styles.Let_House_Button} onPress={addPerson}>+</Button>
-                    <Button style={styles.Let_House_Button} onPress={handleSave}>Başvuru Kaydet</Button>
+                    </View>
+                    <Button style={styles.Let_House_Button} onPress={handleAddInput}>Kişi ekle</Button>
+                    <Button style={styles.Let_House_Button} onPress={set}>Başvuru Kaydet</Button>
                 </View>
             </ScrollView>
         </Provider>
